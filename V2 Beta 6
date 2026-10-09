@@ -1,0 +1,1234 @@
+
+--==================================================
+-- BaKhiPhuc v2 Beta 6
+-- LocalScript | Roblox Studio
+--==================================================
+
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RS = game:GetService("RunService")
+local TS = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local old = playerGui:FindFirstChild("BaKhiPhuc")
+if old then old:Destroy() end
+
+local S = {
+    noclip = false,
+    infiniteJump = false,
+    fly = false,
+    luckyAura = false,
+    playerAura = false,
+    rgb = false,
+    optimize = false,
+    liquidGlass = false,
+    runSpeed = 16,
+    flySpeed = 60,
+    fps = 60,
+    colorName = "Tím"
+}
+
+local theme = Color3.fromRGB(125, 75, 255)
+local green = Color3.fromRGB(65, 255, 115)
+
+local character, humanoid, root
+local flyVelocity, flyGyro
+local flyUp, flyDown = false, false
+local savedCollisions = {}
+local savedGraphics = {}
+local hue, pulse = 0, 0
+local menuBusy = false
+local tabButtons = {}
+
+local function create(class, props, parent)
+    local obj = Instance.new(class)
+    for k, v in pairs(props or {}) do
+        obj[k] = v
+    end
+    obj.Parent = parent
+    return obj
+end
+
+local function round(obj, radius)
+    create("UICorner", {
+        CornerRadius = UDim.new(0, radius or 10)
+    }, obj)
+end
+
+local function stroke(obj, color, thickness, transparency)
+    return create("UIStroke", {
+        Color = color or theme,
+        Thickness = thickness or 1,
+        Transparency = transparency or 0
+    }, obj)
+end
+
+local function tween(obj, duration, props, style, direction)
+    local t = TS:Create(obj, TweenInfo.new(
+        duration,
+        style or Enum.EasingStyle.Quint,
+        direction or Enum.EasingDirection.Out
+    ), props)
+    t:Play()
+    return t
+end
+
+local function makeButton(parent, text, height)
+    local b = create("TextButton", {
+        Size = UDim2.new(1, 0, 0, height or 38),
+        BackgroundColor3 = Color3.fromRGB(37, 41, 43),
+        BackgroundTransparency = 0.08,
+        Text = text,
+        TextColor3 = Color3.fromRGB(245, 248, 246),
+        TextSize = 13,
+        Font = Enum.Font.GothamMedium,
+        AutoButtonColor = false,
+        BorderSizePixel = 0
+    }, parent)
+
+    round(b, 11)
+    local edge = stroke(b, Color3.fromRGB(130, 145, 135), 1, 0.75)
+
+    b.Activated:Connect(function()
+        tween(b, 0.08, {BackgroundTransparency = 0.28})
+        task.delay(0.1, function()
+            if b.Parent then
+                tween(b, 0.18, {BackgroundTransparency = 0.08})
+            end
+        end)
+    end)
+
+    b.MouseEnter:Connect(function()
+        tween(edge, 0.15, {Transparency = 0.25})
+    end)
+    b.MouseLeave:Connect(function()
+        tween(edge, 0.15, {Transparency = 0.75})
+    end)
+
+    return b
+end
+
+--==================================================
+-- GUI
+--==================================================
+
+local gui = create("ScreenGui", {
+    Name = "BaKhiPhuc",
+    ResetOnSpawn = false,
+    DisplayOrder = 20,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+}, playerGui)
+
+local bubble = create("TextButton", {
+    Name = "OpenButton",
+    AnchorPoint = Vector2.new(1, 0),
+    Position = UDim2.new(1, -16, 0, 100),
+    Size = UDim2.fromOffset(50, 50),
+    BackgroundColor3 = theme,
+    Text = "BKP",
+    TextColor3 = Color3.new(1, 1, 1),
+    TextSize = 13,
+    Font = Enum.Font.GothamBold,
+    AutoButtonColor = false,
+    ZIndex = 20
+}, gui)
+round(bubble, 25)
+stroke(bubble, Color3.new(1, 1, 1), 1, 0.35)
+
+local bubbleScale = create("UIScale", {Scale = 1}, bubble)
+
+local main = create("Frame", {
+    Name = "Main",
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    Position = UDim2.new(0.5, 0, 0.5, 0),
+    Size = UDim2.fromOffset(350, 420),
+    BackgroundColor3 = Color3.fromRGB(24, 27, 29),
+    BackgroundTransparency = 0.08,
+    Visible = false,
+    Active = true,
+    BorderSizePixel = 0
+}, gui)
+round(main, 20)
+
+local mainStroke = stroke(main, theme, 1.3, 0.35)
+local mainScale = create("UIScale", {Scale = 0.88}, main)
+
+local mainGradient = create("UIGradient", {
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(38, 43, 42)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 23, 28))
+    }),
+    Rotation = 90
+}, main)
+
+local header = create("Frame", {
+    Name = "Header",
+    Size = UDim2.new(1, 0, 0, 49),
+    BackgroundColor3 = theme,
+    Active = true,
+    BorderSizePixel = 0
+}, main)
+round(header, 18)
+
+create("UIGradient", {
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 110, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(78, 60, 200))
+    }),
+    Rotation = 20
+}, header)
+
+create("TextLabel", {
+    Position = UDim2.fromOffset(15, 0),
+    Size = UDim2.new(1, -65, 1, 0),
+    BackgroundTransparency = 1,
+    Text = "BaKhiPhuc  •  Beta 6",
+    TextColor3 = Color3.new(1, 1, 1),
+    TextSize = 15,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left
+}, header)
+
+local close = create("TextButton", {
+    AnchorPoint = Vector2.new(1, 0.5),
+    Position = UDim2.new(1, -9, 0.5, 0),
+    Size = UDim2.fromOffset(29, 29),
+    BackgroundColor3 = Color3.fromRGB(55, 43, 66),
+    Text = "×",
+    TextColor3 = Color3.new(1, 1, 1),
+    TextSize = 23,
+    Font = Enum.Font.GothamMedium,
+    AutoButtonColor = false
+}, header)
+round(close, 15)
+
+local tabs = create("Frame", {
+    Position = UDim2.fromOffset(9, 57),
+    Size = UDim2.new(1, -18, 0, 36),
+    BackgroundTransparency = 1
+}, main)
+
+create("UIListLayout", {
+    FillDirection = Enum.FillDirection.Horizontal,
+    Padding = UDim.new(0, 5)
+}, tabs)
+
+local content = create("ScrollingFrame", {
+    Position = UDim2.fromOffset(9, 101),
+    Size = UDim2.new(1, -18, 1, -111),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ScrollBarThickness = 3,
+    ScrollBarImageColor3 = theme,
+    AutomaticCanvasSize = Enum.AutomaticSize.Y,
+    CanvasSize = UDim2.new()
+}, main)
+
+create("UIListLayout", {
+    Padding = UDim.new(0, 8),
+    SortOrder = Enum.SortOrder.LayoutOrder
+}, content)
+
+local function clearContent()
+    for _, obj in ipairs(content:GetChildren()) do
+        if obj:IsA("GuiObject") then obj:Destroy() end
+    end
+end
+
+local function label(text, height)
+    return create("TextLabel", {
+        Size = UDim2.new(1, 0, 0, height or 28),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = Color3.fromRGB(240, 245, 241),
+        TextSize = 13,
+        Font = Enum.Font.GothamBold,
+        TextWrapped = true
+    }, content)
+end
+
+--==================================================
+-- MENU ANIMATION
+--==================================================
+
+local function openMenu()
+    if menuBusy or main.Visible then return end
+    menuBusy = true
+    main.Visible = true
+    mainScale.Scale = 0.88
+    main.BackgroundTransparency = 0.4
+    mainStroke.Transparency = 1
+
+    tween(mainScale, 0.38, {Scale = 1}, Enum.EasingStyle.Back)
+    tween(main, 0.28, {BackgroundTransparency = S.liquidGlass and 0.32 or 0.08})
+    tween(mainStroke, 0.3, {Transparency = S.liquidGlass and 0.18 or 0.35})
+    tween(bubbleScale, 0.2, {Scale = 1.08}, Enum.EasingStyle.Back)
+
+    task.delay(0.22, function()
+        if bubble.Parent then tween(bubbleScale, 0.16, {Scale = 1}) end
+    end)
+    task.delay(0.4, function() menuBusy = false end)
+end
+
+local function closeMenu()
+    if menuBusy or not main.Visible then return end
+    menuBusy = true
+
+    tween(mainScale, 0.19, {Scale = 0.91}, Enum.EasingStyle.Quad)
+    tween(main, 0.19, {BackgroundTransparency = 0.45})
+    tween(mainStroke, 0.16, {Transparency = 1})
+
+    task.delay(0.2, function()
+        main.Visible = false
+        mainScale.Scale = 0.88
+        main.BackgroundTransparency = S.liquidGlass and 0.32 or 0.08
+        mainStroke.Transparency = S.liquidGlass and 0.18 or 0.35
+        menuBusy = false
+    end)
+end
+
+-- Kéo menu và nút nổi: dùng InputChanged trên UserInputService
+local function makeDraggable(target, handle)
+    local dragging, activeInput = false, nil
+    local startPoint, startPosition
+
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            activeInput = input
+            startPoint = input.Position
+            startPosition = target.Position
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(input)
+        if not dragging then return end
+
+        local isMouse = activeInput
+            and activeInput.UserInputType == Enum.UserInputType.MouseButton1
+            and input.UserInputType == Enum.UserInputType.MouseMovement
+
+        local isTouch = activeInput
+            and activeInput.UserInputType == Enum.UserInputType.Touch
+            and input == activeInput
+
+        if isMouse or isTouch then
+            local delta = input.Position - startPoint
+            target.Position = UDim2.new(
+                startPosition.X.Scale,
+                startPosition.X.Offset + delta.X,
+                startPosition.Y.Scale,
+                startPosition.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(input)
+        if input == activeInput
+            or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+            activeInput = nil
+        end
+    end)
+end
+
+makeDraggable(main, header)
+
+local bubbleHeld, bubbleMoved = false, false
+local bubbleInput, bubbleStart, bubbleStartPosition
+
+bubble.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch
+        or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        bubbleHeld = true
+        bubbleMoved = false
+        bubbleInput = input
+        bubbleStart = input.Position
+        bubbleStartPosition = bubble.Position
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if not bubbleHeld then return end
+
+    local isMouse = bubbleInput
+        and bubbleInput.UserInputType == Enum.UserInputType.MouseButton1
+        and input.UserInputType == Enum.UserInputType.MouseMovement
+
+    local isTouch = bubbleInput
+        and bubbleInput.UserInputType == Enum.UserInputType.Touch
+        and input == bubbleInput
+
+    if isMouse or isTouch then
+        local delta = input.Position - bubbleStart
+        if delta.Magnitude > 7 then bubbleMoved = true end
+
+        bubble.Position = UDim2.new(
+            bubbleStartPosition.X.Scale,
+            bubbleStartPosition.X.Offset + delta.X,
+            bubbleStartPosition.Y.Scale,
+            bubbleStartPosition.Y.Offset + delta.Y
+        )
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input == bubbleInput
+        or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        bubbleHeld = false
+        bubbleInput = nil
+    end
+end)
+
+bubble.Activated:Connect(function()
+    if bubbleMoved then
+        bubbleMoved = false
+        return
+    end
+    if main.Visible then closeMenu() else openMenu() end
+end)
+
+close.Activated:Connect(closeMenu)
+
+-- Resize bốn góc
+local function addGrip(name, anchor, position, xSign, ySign)
+    local grip = create("TextButton", {
+        Name = name,
+        AnchorPoint = anchor,
+        Position = position,
+        Size = UDim2.fromOffset(17, 17),
+        BackgroundColor3 = theme,
+        Text = "",
+        ZIndex = 5,
+        AutoButtonColor = false
+    }, main)
+    round(grip, 5)
+
+    local resizing, activeInput = false, nil
+    local origin, initialSize, initialPosition
+
+    grip.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            resizing = true
+            activeInput = input
+            origin = input.Position
+            initialSize = main.AbsoluteSize
+            initialPosition = main.Position
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(input)
+        if not resizing then return end
+
+        local isMouse = activeInput
+            and activeInput.UserInputType == Enum.UserInputType.MouseButton1
+            and input.UserInputType == Enum.UserInputType.MouseMovement
+
+        local isTouch = activeInput
+            and activeInput.UserInputType == Enum.UserInputType.Touch
+            and input == activeInput
+
+        if isMouse or isTouch then
+            local delta = input.Position - origin
+            local w = math.max(270, initialSize.X + delta.X * xSign)
+            local h = math.max(260, initialSize.Y + delta.Y * ySign)
+            main.Size = UDim2.fromOffset(w, h)
+
+            local px, py = initialPosition.X.Offset, initialPosition.Y.Offset
+            if xSign < 0 then px += (initialSize.X - w) / 2 end
+            if ySign < 0 then py += (initialSize.Y - h) / 2 end
+
+            main.Position = UDim2.new(
+                initialPosition.X.Scale, px,
+                initialPosition.Y.Scale, py
+            )
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(input)
+        if input == activeInput
+            or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            resizing = false
+            activeInput = nil
+        end
+    end)
+end
+
+addGrip("TopLeftGrip", Vector2.new(0, 0), UDim2.new(0, 0, 0, 0), -1, -1)
+addGrip("TopRightGrip", Vector2.new(1, 0), UDim2.new(1, 0, 0, 0), 1, -1)
+addGrip("BottomLeftGrip", Vector2.new(0, 1), UDim2.new(0, 0, 1, 0), -1, 1)
+addGrip("BottomRightGrip", Vector2.new(1, 1), UDim2.new(1, 1, 1, 1), 1, 1)
+
+--==================================================
+-- PLAYER AURA
+--==================================================
+
+local auraObjects = {}
+local auraConnection
+
+local function removePlayerAura()
+    if auraConnection then
+        auraConnection:Disconnect()
+        auraConnection = nil
+    end
+    for _, obj in ipairs(auraObjects) do
+        if obj and obj.Parent then obj:Destroy() end
+    end
+    table.clear(auraObjects)
+end
+
+local function setPlayerAura(enabled)
+    S.playerAura = enabled
+    removePlayerAura()
+
+    if not enabled or not character or not root then return end
+
+    local h = Instance.new("Highlight")
+    h.Name = "BKP_PlayerAura"
+    h.Adornee = character
+    h.FillColor = green
+    h.OutlineColor = Color3.fromRGB(170, 255, 185)
+    h.FillTransparency = 0.86
+    h.OutlineTransparency = 0.1
+    h.Parent = character
+    table.insert(auraObjects, h)
+
+    local attachment = Instance.new("Attachment")
+    attachment.Name = "BKP_AuraAttachment"
+    attachment.Parent = root
+    table.insert(auraObjects, attachment)
+
+    local emitter = Instance.new("ParticleEmitter")
+    emitter.Name = "BKP_GreenAura"
+    emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+    emitter.Color = ColorSequence.new(green, Color3.fromRGB(15, 180, 65))
+    emitter.LightEmission = 0.8
+    emitter.Rate = 18
+    emitter.Lifetime = NumberRange.new(0.5, 1)
+    emitter.Speed = NumberRange.new(0.5, 2)
+    emitter.SpreadAngle = Vector2.new(180, 180)
+    emitter.Rotation = NumberRange.new(0, 360)
+    emitter.RotSpeed = NumberRange.new(-100, 100)
+    emitter.Size = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.12),
+        NumberSequenceKeypoint.new(0.5, 0.3),
+        NumberSequenceKeypoint.new(1, 0)
+    })
+    emitter.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.1),
+        NumberSequenceKeypoint.new(1, 1)
+    })
+    emitter.Parent = attachment
+    table.insert(auraObjects, emitter)
+
+    local light = Instance.new("PointLight")
+    light.Name = "BKP_AuraLight"
+    light.Color = green
+    light.Brightness = 0.8
+    light.Range = 8
+    light.Parent = root
+    table.insert(auraObjects, light)
+
+    local elapsed = 0
+    auraConnection = RS.Heartbeat:Connect(function(dt)
+        if not S.playerAura or not h.Parent then return end
+        elapsed += dt
+        local wave = (math.sin(elapsed * 3) + 1) / 2
+        h.OutlineColor = Color3.fromRGB(70 + math.floor(wave * 100), 255, 100)
+        light.Brightness = 0.5 + wave
+    end)
+end
+
+--==================================================
+-- LUCKY 1000% AURA
+--==================================================
+
+local luckyFrame = create("Frame", {
+    Name = "LuckyAura",
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    Position = UDim2.new(0.5, 0, 0.2, 0),
+    Size = UDim2.fromOffset(270, 88),
+    BackgroundColor3 = Color3.fromRGB(7, 24, 14),
+    BackgroundTransparency = 1,
+    Visible = false,
+    ZIndex = 30
+}, gui)
+round(luckyFrame, 22)
+local luckyStroke = stroke(luckyFrame, green, 2, 1)
+local luckyScale = create("UIScale", {Scale = 0.65}, luckyFrame)
+
+create("UIGradient", {
+    Color = ColorSequence.new(
+        Color3.fromRGB(17, 55, 29),
+        Color3.fromRGB(8, 25, 16)
+    ),
+    Rotation = 25
+}, luckyFrame)
+
+local ring1 = create("Frame", {
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    Position = UDim2.new(0.5, 0, 0.5, 0),
+    Size = UDim2.fromOffset(62, 62),
+    BackgroundTransparency = 1,
+    ZIndex = 31
+}, luckyFrame)
+round(ring1, 40)
+local ringStroke1 = stroke(ring1, green, 2, 0.1)
+
+local ring2 = create("Frame", {
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    Position = UDim2.new(0.5, 0, 0.5, 0),
+    Size = UDim2.fromOffset(48, 48),
+    BackgroundTransparency = 1,
+    ZIndex = 31
+}, luckyFrame)
+round(ring2, 40)
+local ringStroke2 = stroke(ring2, Color3.fromRGB(190, 255, 200), 1, 0.15)
+
+create("TextLabel", {
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    Position = UDim2.new(0, 39, 0.5, 0),
+    Size = UDim2.fromOffset(43, 43),
+    BackgroundTransparency = 1,
+    Text = "🍀",
+    TextSize = 32,
+    Font = Enum.Font.GothamBold,
+    ZIndex = 35
+}, luckyFrame)
+
+local luckyTitle = create("TextLabel", {
+    Position = UDim2.fromOffset(70, 12),
+    Size = UDim2.new(1, -78, 0, 29),
+    BackgroundTransparency = 1,
+    Text = "LUCKY 1000%",
+    TextColor3 = Color3.fromRGB(135, 255, 155),
+    TextSize = 20,
+    Font = Enum.Font.GothamBlack,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 35
+}, luckyFrame)
+
+create("TextLabel", {
+    Position = UDim2.fromOffset(72, 43),
+    Size = UDim2.new(1, -80, 0, 20),
+    BackgroundTransparency = 1,
+    Text = "⚡ GREEN ELECTRIC AURA",
+    TextColor3 = Color3.fromRGB(90, 235, 125),
+    TextSize = 10,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 35
+}, luckyFrame)
+
+local sparks = {}
+for i = 1, 8 do
+    local spark = create("TextLabel", {
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        Size = UDim2.fromOffset(20, 20),
+        BackgroundTransparency = 1,
+        Text = i % 2 == 0 and "✦" or "⚡",
+        TextColor3 = green,
+        TextSize = i % 2 == 0 and 12 or 14,
+        Font = Enum.Font.GothamBlack,
+        ZIndex = 34
+    }, luckyFrame)
+    table.insert(sparks, spark)
+end
+
+local function setLuckyAura(enabled)
+    S.luckyAura = enabled
+
+    if enabled then
+        luckyFrame.Visible = true
+        luckyScale.Scale = 0.65
+        luckyFrame.BackgroundTransparency = 1
+        luckyStroke.Transparency = 1
+
+        tween(luckyScale, 0.45, {Scale = 1}, Enum.EasingStyle.Back)
+        tween(luckyFrame, 0.3, {BackgroundTransparency = 0.08})
+        tween(luckyStroke, 0.3, {Transparency = 0.05})
+        tween(ring1, 0.5, {Size = UDim2.fromOffset(76, 76)})
+        tween(ring2, 0.5, {Size = UDim2.fromOffset(53, 53)})
+    else
+        tween(luckyScale, 0.2, {Scale = 0.65}, Enum.EasingStyle.Quad)
+        tween(luckyFrame, 0.2, {BackgroundTransparency = 1})
+        tween(luckyStroke, 0.16, {Transparency = 1})
+        task.delay(0.22, function()
+            if not S.luckyAura then luckyFrame.Visible = false end
+        end)
+    end
+end
+
+--==================================================
+-- CHARACTER + MOVEMENT
+--==================================================
+
+local function onCharacter(char)
+    character = char
+    humanoid = char:WaitForChild("Humanoid")
+    root = char:WaitForChild("HumanoidRootPart")
+
+    humanoid.WalkSpeed = S.runSpeed
+
+    if S.playerAura then
+        task.defer(function()
+            if character == char then setPlayerAura(true) end
+        end)
+    end
+end
+
+if player.Character then task.spawn(onCharacter, player.Character) end
+player.CharacterAdded:Connect(onCharacter)
+
+local function setFly(enabled)
+    S.fly = enabled
+
+    if not root or not humanoid then return end
+
+    if enabled then
+        if flyVelocity then flyVelocity:Destroy() end
+        if flyGyro then flyGyro:Destroy() end
+
+        flyVelocity = Instance.new("BodyVelocity")
+        flyVelocity.Name = "BKP_FlyVelocity"
+        flyVelocity.MaxForce = Vector3.new(1e6, 1e6, 1e6)
+        flyVelocity.Velocity = Vector3.zero
+        flyVelocity.Parent = root
+
+        flyGyro = Instance.new("BodyGyro")
+        flyGyro.Name = "BKP_FlyGyro"
+        flyGyro.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
+        flyGyro.P = 10000
+        flyGyro.CFrame = root.CFrame
+        flyGyro.Parent = root
+
+        humanoid.PlatformStand = true
+    else
+        if flyVelocity then flyVelocity:Destroy(); flyVelocity = nil end
+        if flyGyro then flyGyro:Destroy(); flyGyro = nil end
+        humanoid.PlatformStand = false
+        flyUp, flyDown = false, false
+    end
+end
+
+local flyControls = create("Frame", {
+    Name = "FlyControls",
+    AnchorPoint = Vector2.new(1, 0.5),
+    Position = UDim2.new(1, -14, 0.5, 0),
+    Size = UDim2.fromOffset(66, 112),
+    BackgroundTransparency = 1,
+    Visible = false
+}, gui)
+
+create("UIListLayout", {
+    Padding = UDim.new(0, 8)
+}, flyControls)
+
+local upButton = makeButton(flyControls, "▲ UP", 50)
+local downButton = makeButton(flyControls, "▼ DOWN", 50)
+upButton.BackgroundColor3 = theme
+downButton.BackgroundColor3 = theme
+
+local function bindHold(btn, setValue)
+    btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch
+            or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            setValue(true)
+        end
+    end)
+    btn.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch
+            or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            setValue(false)
+        end
+    end)
+end
+
+bindHold(upButton, function(v) flyUp = v end)
+bindHold(downButton, function(v) flyDown = v end)
+
+UIS.JumpRequest:Connect(function()
+    if S.infiniteJump and humanoid and not S.fly then
+        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+RS.Stepped:Connect(function()
+    if S.noclip and character then
+        for _, part in ipairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                if savedCollisions[part] == nil then
+                    savedCollisions[part] = part.CanCollide
+                end
+                part.CanCollide = false
+            end
+        end
+    elseif next(savedCollisions) then
+        for part, wasCollidable in pairs(savedCollisions) do
+            if part and part.Parent then
+                part.CanCollide = wasCollidable
+            end
+        end
+        table.clear(savedCollisions)
+    end
+end)
+
+--==================================================
+-- GRAPHICS OPTIMIZER
+--==================================================
+
+local function optimizeGraphics(enabled)
+    S.optimize = enabled
+
+    if enabled then
+        table.clear(savedGraphics)
+
+        local function saveProperty(obj, property, newValue)
+            local ok, oldValue = pcall(function()
+                return obj[property]
+            end)
+            if not ok then return end
+
+            table.insert(savedGraphics, {
+                obj = obj,
+                property = property,
+                value = oldValue
+            })
+
+            pcall(function()
+                obj[property] = newValue
+            end)
+        end
+
+        saveProperty(Lighting, "GlobalShadows", false)
+
+        for _, obj in ipairs(Lighting:GetDescendants()) do
+            if obj:IsA("PostEffect") then
+                saveProperty(obj, "Enabled", false)
+            end
+        end
+
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("ParticleEmitter")
+                or obj:IsA("Trail")
+                or obj:IsA("Beam")
+                or obj:IsA("Fire")
+                or obj:IsA("Smoke")
+                or obj:IsA("Sparkles") then
+                saveProperty(obj, "Enabled", false)
+            end
+        end
+    else
+        for _, entry in ipairs(savedGraphics) do
+            if entry.obj and entry.obj.Parent then
+                pcall(function()
+                    entry.obj[entry.property] = entry.value
+                end)
+            end
+        end
+        table.clear(savedGraphics)
+    end
+end
+
+--==================================================
+-- LIQUID GLASS
+--==================================================
+
+local function setLiquidGlass(enabled)
+    S.liquidGlass = enabled
+
+    if enabled then
+        main.BackgroundColor3 = Color3.fromRGB(35, 42, 48)
+        main.BackgroundTransparency = 0.32
+        mainGradient.Color = ColorSequence.new(
+            Color3.fromRGB(105, 125, 135),
+            Color3.fromRGB(18, 25, 31)
+        )
+        mainGradient.Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.18),
+            NumberSequenceKeypoint.new(1, 0.42)
+        })
+        header.BackgroundTransparency = 0.28
+        mainStroke.Color = Color3.fromRGB(220, 245, 255)
+        mainStroke.Transparency = 0.18
+        mainStroke.Thickness = 1.4
+    else
+        main.BackgroundColor3 = Color3.fromRGB(24, 27, 29)
+        main.BackgroundTransparency = 0.08
+        mainGradient.Color = ColorSequence.new(
+            Color3.fromRGB(38, 43, 42),
+            Color3.fromRGB(20, 23, 28)
+        )
+        mainGradient.Transparency = NumberSequence.new(0)
+        header.BackgroundTransparency = 0
+        mainStroke.Color = theme
+        mainStroke.Transparency = 0.35
+        mainStroke.Thickness = 1.3
+    end
+end
+
+--==================================================
+-- TAB HELPERS
+--==================================================
+
+local function addTab(name, callback)
+    local b = create("TextButton", {
+        Size = UDim2.new(1/3, -4, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(38, 43, 41),
+        Text = name,
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        AutoButtonColor = false
+    }, tabs)
+    round(b, 11)
+    table.insert(tabButtons, b)
+
+    b.Activated:Connect(function()
+        for _, tab in ipairs(tabButtons) do
+            tween(tab, 0.16, {
+                BackgroundColor3 = tab == b
+                    and theme
+                    or Color3.fromRGB(38, 43, 41)
+            })
+        end
+        callback()
+    end)
+end
+
+local function toggleRow(title, key, onChange)
+    local b = makeButton(
+        content,
+        title .. ": " .. (S[key] and "ON" or "OFF"),
+        39
+    )
+
+    b.Activated:Connect(function()
+        local newValue = not S[key]
+
+        if key == "luckyAura" then
+            setLuckyAura(newValue)
+        elseif key == "playerAura" then
+            setPlayerAura(newValue)
+        else
+            S[key] = newValue
+        end
+
+        if onChange then onChange(newValue) end
+
+        b.Text = title .. ": " .. (newValue and "ON" or "OFF")
+        b.BackgroundColor3 = newValue
+            and Color3.fromRGB(28, 95, 51)
+            or Color3.fromRGB(37, 41, 43)
+    end)
+
+    return b
+end
+
+local function numericSetting(title, currentValue, minValue, maxValue, apply)
+    label(title .. " hiện tại: " .. currentValue, 25)
+
+    local row = create("Frame", {
+        Size = UDim2.new(1, 0, 0, 39),
+        BackgroundTransparency = 1
+    }, content)
+
+    create("UIListLayout", {
+        FillDirection = Enum.FillDirection.Horizontal,
+        Padding = UDim.new(0, 6)
+    }, row)
+
+    local input = create("TextBox", {
+        Size = UDim2.new(0.65, -3, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(37, 41, 43),
+        Text = tostring(currentValue),
+        PlaceholderText = "Nhập số...",
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        ClearTextOnFocus = false
+    }, row)
+    round(input, 10)
+
+    local applyButton = create("TextButton", {
+        Size = UDim2.new(0.35, -3, 1, 0),
+        BackgroundColor3 = theme,
+        Text = "APPLY",
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        AutoButtonColor = false
+    }, row)
+    round(applyButton, 10)
+
+    applyButton.Activated:Connect(function()
+        local value = tonumber(input.Text)
+        if not value or value ~= value then
+            input.Text = tostring(currentValue)
+            return
+        end
+
+        value = math.clamp(math.floor(value), minValue, maxValue)
+        input.Text = tostring(value)
+        apply(value)
+    end)
+end
+
+--==================================================
+-- MOVEMENT TAB
+--==================================================
+
+local function showMovement()
+    clearContent()
+    label("MOVEMENT", 30)
+
+    toggleRow("Noclip", "noclip", function(enabled)
+        if not enabled then
+            for part, wasCollidable in pairs(savedCollisions) do
+                if part and part.Parent then
+                    part.CanCollide = wasCollidable
+                end
+            end
+            table.clear(savedCollisions)
+        end
+    end)
+
+    toggleRow("Infinite Jump", "infiniteJump")
+
+    toggleRow("Fly", "fly", function(enabled)
+        setFly(enabled)
+        flyControls.Visible = enabled
+    end)
+
+    numericSetting("Run Speed", S.runSpeed, 0, 200, function(value)
+        S.runSpeed = value
+        if humanoid then humanoid.WalkSpeed = value end
+        showMovement()
+    end)
+
+    numericSetting("Fly Speed", S.flySpeed, 1, 300, function(value)
+        S.flySpeed = value
+        showMovement()
+    end)
+end
+
+--==================================================
+-- GIA VỊ TAB
+--==================================================
+
+local function showSeasoning()
+    clearContent()
+    label("🍀 LUCKY LAB", 30)
+
+    local lucky = toggleRow("🍀 LUCKY 1000%", "luckyAura")
+    lucky.Text = S.luckyAura
+        and "🍀 LUCKY 1000%: ON"
+        or "🍀 LUCKY 1000%: OFF"
+
+    local playerAura = toggleRow("🟢 Aura quanh Player", "playerAura")
+    playerAura.Text = S.playerAura
+        and "🟢 Player Aura: ON"
+        or "🟢 Player Aura: OFF"
+
+    local roll = makeButton(content, "⚡ Lucky Roll", 42)
+    roll.Activated:Connect(function()
+        local score = math.random(1, 100)
+        if score >= 95 then
+            roll.Text = "🍀 SIÊU MAY MẮN! " .. score .. "/100"
+        elseif score >= 70 then
+            roll.Text = "✨ KHÁ MAY MẮN: " .. score .. "/100"
+        else
+            roll.Text = "🥲 XUI NHẸ: " .. score .. "/100"
+        end
+    end)
+
+    local surprise = makeButton(content, "🎁 Hộp quà bí ẩn", 40)
+    surprise.Activated:Connect(function()
+        local gifts = {
+            "🍀 100 điểm may mắn giả!",
+            "✨ Vận may tinh thần +100!",
+            "🎁 Một lời chúc may mắn!",
+            "📦 Trúng một cái hộp rỗng!",
+            "⚡ Chúc quay ra đồ xịn!"
+        }
+        surprise.Text = gifts[math.random(1, #gifts)]
+    end)
+
+    label("Lucky 1000% là hiệu ứng hiển thị, không đổi tỉ lệ thưởng thật.", 42)
+end
+
+--==================================================
+-- SETTING TAB
+--==================================================
+
+local colorOptions = {
+    {name = "Tím", color = Color3.fromRGB(125, 75, 255)},
+    {name = "Xanh", color = Color3.fromRGB(35, 150, 255)},
+    {name = "Đỏ", color = Color3.fromRGB(245, 65, 80)},
+    {name = "Xanh lá", color = Color3.fromRGB(45, 200, 125)},
+    {name = "Hồng", color = Color3.fromRGB(255, 90, 190)},
+    {name = "Trắng", color = Color3.fromRGB(220, 220, 235)}
+}
+
+local function applyTheme(color)
+    theme = color
+    header.BackgroundColor3 = color
+    bubble.BackgroundColor3 = color
+    upButton.BackgroundColor3 = color
+    downButton.BackgroundColor3 = color
+    content.ScrollBarImageColor3 = color
+
+    for _, obj in ipairs(main:GetDescendants()) do
+        if obj:IsA("UIStroke") and not S.liquidGlass then
+            obj.Color = color
+        elseif obj:IsA("TextButton") and obj.Name:find("Grip") then
+            obj.BackgroundColor3 = color
+        end
+    end
+end
+
+local function showSettings()
+    clearContent()
+    label("SETTING", 30)
+
+    local optimizeButton = makeButton(
+        content,
+        S.optimize and "⚡ Tối ưu game: ON" or "⚡ Tối ưu game: OFF",
+        40
+    )
+
+    optimizeButton.Activated:Connect(function()
+        optimizeGraphics(not S.optimize)
+        optimizeButton.Text = S.optimize
+            and "⚡ Tối ưu game: ON"
+            or "⚡ Tối ưu game: OFF"
+        optimizeButton.BackgroundColor3 = S.optimize
+            and Color3.fromRGB(28, 95, 51)
+            or Color3.fromRGB(37, 41, 43)
+    end)
+
+    local glassButton = makeButton(
+        content,
+        S.liquidGlass and "💎 Liquid Glass: ON" or "💎 Liquid Glass: OFF",
+        40
+    )
+
+    glassButton.Activated:Connect(function()
+        setLiquidGlass(not S.liquidGlass)
+        glassButton.Text = S.liquidGlass
+            and "💎 Liquid Glass: ON"
+            or "💎 Liquid Glass: OFF"
+    end)
+
+    label("FPS (chỉ lựa chọn hiển thị)", 28)
+
+    for _, fps in ipairs({60, 80, 100, 120, 240}) do
+        local b = makeButton(
+            content,
+            "FPS " .. fps .. (S.fps == fps and " ✓" or ""),
+            35
+        )
+        b.Activated:Connect(function()
+            S.fps = fps
+            showSettings()
+        end)
+    end
+
+    label("Các lựa chọn FPS không ép giới hạn FPS thật của Roblox.", 40)
+    label("MÀU CHỦ ĐỀ", 28)
+
+    for _, entry in ipairs(colorOptions) do
+        local b = makeButton(
+            content,
+            entry.name .. (S.colorName == entry.name and " ✓" or ""),
+            35
+        )
+        b.Activated:Connect(function()
+            S.colorName = entry.name
+            applyTheme(entry.color)
+            showSettings()
+        end)
+    end
+end
+
+addTab("Movement", showMovement)
+addTab("Gia vị", showSeasoning)
+addTab("Setting", showSettings)
+
+for _, b in ipairs(tabButtons) do
+    if b.Text == "Movement" then
+        b.BackgroundColor3 = theme
+    end
+end
+
+showMovement()
+
+--==================================================
+-- EFFECT ANIMATION LOOP
+--==================================================
+
+local ringAngle = 0
+
+RS.RenderStepped:Connect(function(dt)
+    hue = (hue + dt * 0.25) % 1
+    ringAngle = (ringAngle + dt * 100) % 360
+    pulse += dt * 3
+
+    if S.rgb then
+        local c = Color3.fromHSV(hue, 0.8, 1)
+        header.BackgroundColor3 = c
+        bubble.BackgroundColor3 = c
+    end
+
+    if S.luckyAura then
+        local wave = (math.sin(pulse) + 1) / 2
+
+        ring1.Rotation = ringAngle
+        ring2.Rotation = -ringAngle * 1.35
+        ringStroke1.Thickness = 1.3 + wave * 2
+        ringStroke1.Transparency = 0.05 + wave * 0.3
+        ringStroke2.Transparency = 0.05 + wave * 0.4
+
+        luckyTitle.TextColor3 = Color3.fromRGB(
+            100 + math.floor(wave * 80),
+            255,
+            120 + math.floor(wave * 80)
+        )
+
+        luckyStroke.Thickness = 1.5 + wave * 1.5
+
+        for i, spark in ipairs(sparks) do
+            local angle = math.rad(
+                ringAngle * (i % 2 == 0 and 1 or -1) + i * 45
+            )
+            local radius = 0.35 + wave * 0.08
+
+            spark.Position = UDim2.new(
+                0.5 + math.cos(angle) * radius, 0,
+                0.5 + math.sin(angle) * radius, 0
+            )
+            spark.TextTransparency = 0.05 + wave * 0.55
+            spark.Rotation = ringAngle * (i % 2 == 0 and 1 or -1)
+        end
+    end
+
+    if S.fly and root and humanoid and flyVelocity and flyGyro then
+        local camera = workspace.CurrentCamera
+        local direction = humanoid.MoveDirection
+        local vertical = (flyUp and 1 or 0) - (flyDown and 1 or 0)
+
+        flyVelocity.Velocity =
+            direction * S.flySpeed
+            + Vector3.new(0, vertical * S.flySpeed, 0)
+
+        if camera then flyGyro.CFrame = camera.CFrame end
+    end
+end)
+
+print("BaKhiPhuc v2 Beta 6 loaded!")
